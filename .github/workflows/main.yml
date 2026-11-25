@@ -46,19 +46,57 @@ jobs:
           TERMUX_PACKAGE_VARIANT: apt-android-7
         run: bash ./gradlew assembleDebug
 
-      - name: Collect APKs and checksums
+      - name: Collect each ABI APK separately
         working-directory: extracted/termux-source/termux-app-master
         run: |
           set -euo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/apk-out"
-          cp app/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/apk-out/"
-          cd "$GITHUB_WORKSPACE/apk-out"
-          sha256sum ./*.apk > SHA256SUMS
+          source_dir="app/build/outputs/apk/debug"
+          output_dir="$GITHUB_WORKSPACE/apk-out"
+          mkdir -p "$output_dir"
+          for abi in universal arm64-v8a armeabi-v7a x86_64 x86; do
+            apk="kairo-code_apt-android-7-debug_${abi}.apk"
+            test -f "$source_dir/$apk"
+            mkdir -p "$output_dir/$abi"
+            cp "$source_dir/$apk" "$output_dir/$abi/"
+            (cd "$output_dir/$abi" && sha256sum "$apk" > SHA256SUMS)
+          done
 
-      - name: Upload downloadable APK artifact
+      - name: Upload universal APK
         uses: actions/upload-artifact@v6
         with:
-          name: Kairo-Code-debug-APKs
-          path: apk-out/
+          name: Kairo-Code-universal
+          path: apk-out/universal/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload arm64-v8a APK (recommended for most modern Android phones)
+        uses: actions/upload-artifact@v6
+        with:
+          name: Kairo-Code-arm64-v8a
+          path: apk-out/arm64-v8a/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: Kairo-Code-armeabi-v7a
+          path: apk-out/armeabi-v7a/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: Kairo-Code-x86_64
+          path: apk-out/x86_64/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload x86 APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: Kairo-Code-x86
+          path: apk-out/x86/
           if-no-files-found: error
           retention-days: 30
